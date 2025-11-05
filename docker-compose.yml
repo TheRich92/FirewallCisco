@@ -1,0 +1,88 @@
+
+services:
+  routerfw:
+    build: ./router
+    container_name: routerfw
+    cap_add: ["NET_ADMIN","NET_RAW"]
+    privileged: true
+    sysctls:
+      - net.ipv4.ip_forward=1
+    networks:
+      lan_net:
+        ipv4_address: 10.77.10.254
+      dmz_net:
+        ipv4_address: 10.77.20.254
+      internet_internal_net:
+        ipv4_address: 10.77.30.254
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./router/router-config:/router-config
+
+  pc_lan:
+    image: ubuntu:24.04
+    container_name: pc_lan
+    command: ["bash","-lc","sleep infinity"]
+    cap_add:
+    - NET_ADMIN
+    tty: true
+    networks:
+      lan_net:
+        ipv4_address: 10.77.10.10
+
+  pc_dmz:
+    image: ubuntu:24.04
+    container_name: pc_dmz
+    command: ["bash","-lc","sleep infinity"]
+    cap_add:
+    - NET_ADMIN
+    tty: true
+    networks:
+      dmz_net:
+        ipv4_address: 10.77.20.10
+
+  pc_internet_inside:
+    image: ubuntu:24.04
+    container_name: pc_internet_inside
+    command: ["bash","-lc","sleep infinity"]
+    cap_add:
+    - NET_ADMIN
+    tty: true
+    networks:
+      internet_internal_net:
+        ipv4_address: 10.77.30.10
+
+  web_dmz:
+    image: httpd:2.4
+    container_name: web_dmz
+    ports: ["8880:80"]   # change si déjà pris
+    networks:
+      dmz_net:
+        ipv4_address: 10.77.20.20
+
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    container_name: dvwa
+    networks:
+      internet_internal_net:
+        ipv4_address: 10.77.30.20
+    ports:
+      - "8881:80"
+
+networks:
+  lan_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.10.0/24
+  dmz_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.20.0/24
+  internet_internal_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.30.0/24
+

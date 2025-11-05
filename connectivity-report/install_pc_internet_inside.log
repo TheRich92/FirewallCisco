@@ -1,0 +1,16 @@
+W: Failed to fetch http://ports.ubuntu.com/ubuntu-ports/dists/noble/InRelease  Could not connect to ports.ubuntu.com:80 (91.189.91.104), connection timed out Could not connect to ports.ubuntu.com:80 (91.189.91.102), connection timed out Could not connect to ports.ubuntu.com:80 (185.125.190.39), connection timed out Could not connect to ports.ubuntu.com:80 (91.189.91.103), connection timed out Could not connect to ports.ubuntu.com:80 (185.125.190.36), connection timed out
+W: Failed to fetch http://ports.ubuntu.com/ubuntu-ports/dists/noble-updates/InRelease  Unable to connect to ports.ubuntu.com:80:
+W: Failed to fetch http://ports.ubuntu.com/ubuntu-ports/dists/noble-backports/InRelease  Unable to connect to ports.ubuntu.com:80:
+W: Failed to fetch http://ports.ubuntu.com/ubuntu-ports/dists/noble-security/InRelease  Unable to connect to ports.ubuntu.com:80:
+W: Some index files failed to download. They have been ignored, or old ones used instead.
+E: Unable to locate package iproute2
+E: Unable to locate package iputils-ping
+E: Unable to locate package net-tools
+E: Unable to locate package dnsutils
+E: Unable to locate package curl
+E: Unable to locate package wget
+E: Unable to locate package nmap
+E: Unable to locate package tcpdump
+E: Unable to locate package traceroute
+E: Unable to locate package netcat-openbsd
+E: Unable to locate package python3
