@@ -1,88 +1,68 @@
-
 services:
   routerfw:
-    build: ./router
+    image: ubuntu:24.04
     container_name: routerfw
-    cap_add: ["NET_ADMIN","NET_RAW"]
     privileged: true
-    sysctls:
-      - net.ipv4.ip_forward=1
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    command: tail -f /dev/null
     networks:
+      wan_net: {}
       lan_net:
-        ipv4_address: 10.77.10.254
+        ipv4_address: 10.10.0.254
       dmz_net:
-        ipv4_address: 10.77.20.254
-      internet_internal_net:
-        ipv4_address: 10.77.30.254
-    tty: true
-    stdin_open: true
+        ipv4_address: 10.20.0.254
+      internet_net:
+        ipv4_address: 10.30.0.254
     volumes:
       - ./router/router-config:/router-config
-
   pc_lan:
     image: ubuntu:24.04
     container_name: pc_lan
-    command: ["bash","-lc","sleep infinity"]
-    cap_add:
-    - NET_ADMIN
-    tty: true
+    privileged: true
+    command: ip route replace default via 10.10.0.254 && tail -f /dev/null
     networks:
       lan_net:
-        ipv4_address: 10.77.10.10
+        ipv4_address: 10.10.0.10
 
   pc_dmz:
     image: ubuntu:24.04
     container_name: pc_dmz
-    command: ["bash","-lc","sleep infinity"]
-    cap_add:
-    - NET_ADMIN
-    tty: true
+    privileged: true
+    command: ip route replace default via 10.20.0.254 && tail -f /dev/null
     networks:
       dmz_net:
-        ipv4_address: 10.77.20.10
+        ipv4_address: 10.20.0.10
 
-  pc_internet_inside:
+  pc_internet:
     image: ubuntu:24.04
-    container_name: pc_internet_inside
-    command: ["bash","-lc","sleep infinity"]
-    cap_add:
-    - NET_ADMIN
-    tty: true
+    container_name: pc_internet
+    privileged: true
+    command: ip route replace default via 10.30.0.254 && tail -f /dev/null
     networks:
-      internet_internal_net:
-        ipv4_address: 10.77.30.10
-
-  web_dmz:
-    image: httpd:2.4
-    container_name: web_dmz
-    ports: ["8880:80"]   # change si déjà pris
-    networks:
-      dmz_net:
-        ipv4_address: 10.77.20.20
-
-  dvwa:
-    image: ghcr.io/digininja/dvwa:latest
-    container_name: dvwa
-    networks:
-      internet_internal_net:
-        ipv4_address: 10.77.30.20
-    ports:
-      - "8881:80"
+      internet_net:
+        ipv4_address: 10.30.0.10
 
 networks:
   lan_net:
     driver: bridge
     ipam:
       config:
-        - subnet: 10.77.10.0/24
+        - subnet: 10.10.0.0/24
+
   dmz_net:
     driver: bridge
     ipam:
       config:
-        - subnet: 10.77.20.0/24
-  internet_internal_net:
+        - subnet: 10.20.0.0/24
+
+  internet_net:
     driver: bridge
     ipam:
       config:
-        - subnet: 10.77.30.0/24
+        - subnet: 10.30.0.0/24
+
+  wan_net:
+    driver: bridge
 

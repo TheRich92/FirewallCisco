@@ -1,90 +1,42 @@
 #!/bin/bash
-set -e
 
-###
-# Contexte interfaces (ATTENTION : ordre Docker)
-# dmz_net               -> eth0 -> 10.77.20.254/24 (DMZ)
-# internet_internal_net -> eth1 -> 10.77.30.254/24 (Internet "externe")
-# lan_net               -> eth2 -> 10.77.10.254/24 (LAN interne)
-#
-# Réseaux:
-# LAN                10.77.10.0/24
-# DMZ                10.77.20.0/24
-# Internet interne   10.77.30.0/24
-###
+sysctl -w net.ipv4.ip_forward=1
 
-echo "[*] Activation du routage IP"
-sysctl -w net.ipv4.ip_forward=1 >/dev/null
-
-echo "[*] Flush des anciennes règles"
 iptables -F
-iptables -t nat -F
 iptables -X
+iptables -t nat -F
+iptables -t nat -X
 
-echo "[*] Politiques par défaut strictes"
-iptables -P INPUT DROP
-iptables -P FORWARD DROP
+iptables -P INPUT ACCEPT
 iptables -P OUTPUT ACCEPT
+iptables -P FORWARD DROP
 
-echo "[*] Autoriser trafic établi/relatif"
-iptables -A INPUT   -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+LAN="eth3"      # 10.10.0.254
+DMZ="eth1"      # 10.20.0.254
+WAN="eth0"      # 172.18.0.2
+INT_INSIDE="eth2"  # 10.30.0.254
 
-###
-# Règles autorisées (politique sécurité)
-###
+# 1) Autoriser trafic établi
+iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
 
-echo "[*] Autoriser le LAN -> DMZ (HTTP uniquement)"
-iptables -A FORWARD \
-  -i eth2 -o eth0 \
-  -s 10.77.10.0/24 -d 10.77.20.0/24 \
-  -p tcp --dport 80 \
-  -m conntrack --ctstate NEW \
-  -j ACCEPT
+# 2) Bloquer DMZ → LAN (maintenant correct)
+iptables -A FORWARD -i $DMZ -o $LAN -j DROP
 
-echo "[*] Autoriser le LAN -> Internet interne (HTTP uniquement)"
-iptables -A FORWARD \
-  -i eth2 -o eth1 \
-  -s 10.77.10.0/24 -d 10.77.30.0/24 \
-  -p tcp --dport 80 \
-  -m conntrack --ctstate NEW \
-  -j ACCEPT
+# 3) Autoriser LAN → DMZ
+iptables -A FORWARD -i $LAN -o $DMZ -j ACCEPT
 
-echo "[*] Autoriser Internet interne -> DMZ (HTTP uniquement)"
-iptables -A FORWARD \
-  -i eth1 -o eth0 \
-  -s 10.77.30.0/24 -d 10.77.20.0/24 \
-  -p tcp --dport 80 \
-  -m conntrack --ctstate NEW \
-  -j ACCEPT
+# 4) LAN → Internet + DMZ interne
+iptables -A FORWARD -i $LAN -o $WAN -j ACCEPT
+iptables -A FORWARD -i $LAN -o $INT_INSIDE -j ACCEPT
 
-echo "[*] (Debug) Autoriser l ICMP (ping)"
-iptables -A FORWARD -p icmp -j ACCEPT
+# 5) DMZ → Internet (web)
+iptables -A FORWARD -i $DMZ -o $WAN -p tcp -m multiport --dports 80,443 -j ACCEPT
 
-###
+# 6) WAN → DMZ (web public)
+iptables -A FORWARD -i $WAN -o $DMZ -p tcp -m multiport --dports 80,443 -j ACCEPT
+
 # NAT
-# On "masquerade" le LAN et la DMZ quand ils sortent vers l'Internet interne (eth1)
-###
-echo "[*] Mise en place du NAT/MASQUERADE"
-iptables -t nat -A POSTROUTING -s 10.77.10.0/24 -o eth1 -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 10.77.20.0/24 -o eth1 -j MASQUERADE
+iptables -t nat -A POSTROUTING -o $WAN -j MASQUERADE
 
-echo "[*] État final des tables"
-echo "=== FILTER ==="
-iptables -L -v -n --line-numbers
-echo
-echo "=== NAT ==="
-iptables -t nat -L -v -n --line-numbers
-echo
-echo "[*] Pare-feu appliqué."
+echo "[+] Firewall appliqué (interfaces corrigées)."
 
-########################################
-# 7. Journalisation des paquets bloqués
-########################################
-
-# Loguer tout ce qui est bloqué par la politique FORWARD (DROP par défaut)
-# avec une limitation pour éviter le spam (1 ligne/sec max)
-iptables -A FORWARD -m limit --limit 1/second -j LOG --log-prefix "FW DROP: " --log-level 4
-
-# Loguer aussi ce qui est bloqué en entrée directe sur le routeur
-iptables -A INPUT -m limit --limit 1/second -j LOG --log-prefix "FW INPUT DROP: " --log-level 4

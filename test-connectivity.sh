@@ -4,7 +4,7 @@ set -euo pipefail
 # Noms des conteneurs — adapte si nécessaire
 PC_LAN="pc_lan"
 PC_DMZ="pc_dmz"
-PC_INT="pc_internet_inside"
+PC_INT="pc_internet"
 ROUTER="routerfw"
 WEB_DMZ_IP="10.77.20.20"
 PC_DMZ_IP="10.77.20.10"

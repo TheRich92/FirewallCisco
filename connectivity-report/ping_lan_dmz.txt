@@ -1,1 +1,1 @@
-bash: line 1: ping: command not found
+ping: connect: Network is unreachable
