@@ -6,7 +6,10 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    command: tail -f /dev/null
+    ports:
+      - "80:80"
+      - "81:81"
+
     networks:
       wan_net: {}
       lan_net:
@@ -17,32 +20,67 @@ services:
         ipv4_address: 10.30.0.254
     volumes:
       - ./router/router-config:/router-config
+      - ./router/router-entrypoint.sh:/router-entrypoint.sh
+    command: ["/bin/bash", "/router-entrypoint.sh"]
+
   pc_lan:
     image: ubuntu:24.04
     container_name: pc_lan
     privileged: true
-    command: ip route replace default via 10.10.0.254 && tail -f /dev/null
     networks:
       lan_net:
         ipv4_address: 10.10.0.10
+    command: >
+      bash -lc "
+        apt-get update -y &&
+        apt-get install -y iproute2 iputils-ping curl net-tools dnsutils nmap tcpdump traceroute netcat-openbsd &&
+        ip route replace default via 10.10.0.254 &&
+        tail -f /dev/null
+      "
 
   pc_dmz:
     image: ubuntu:24.04
     container_name: pc_dmz
     privileged: true
-    command: ip route replace default via 10.20.0.254 && tail -f /dev/null
     networks:
       dmz_net:
         ipv4_address: 10.20.0.10
+    command: >
+      bash -lc "
+        apt-get update -y &&
+        apt-get install -y iproute2 iputils-ping curl net-tools dnsutils nmap tcpdump traceroute netcat-openbsd &&
+        ip route replace default via 10.20.0.254 &&
+        tail -f /dev/null
+      "
 
   pc_internet:
     image: ubuntu:24.04
     container_name: pc_internet
     privileged: true
-    command: ip route replace default via 10.30.0.254 && tail -f /dev/null
     networks:
       internet_net:
         ipv4_address: 10.30.0.10
+    command: >
+      bash -lc "
+        apt-get update -y &&
+        apt-get install -y iproute2 iputils-ping curl net-tools dnsutils nmap tcpdump traceroute netcat-openbsd &&
+        ip route replace default via 10.30.0.254 &&
+        tail -f /dev/null
+      "
+
+  web_dmz:
+    image: nginx:alpine
+    container_name: web_dmz
+    networks:
+      dmz_net:
+        ipv4_address: 10.20.0.20
+
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    container_name: dvwa
+    networks:
+      internet_net:
+        ipv4_address: 10.30.0.20
 
 networks:
   lan_net:
@@ -65,4 +103,3 @@ networks:
 
   wan_net:
     driver: bridge
-

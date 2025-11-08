@@ -1,2 +1,0 @@
-Error: Nexthop has invalid gateway.
-10.30.0.0/24 dev eth0 proto kernel scope link src 10.30.0.10 
